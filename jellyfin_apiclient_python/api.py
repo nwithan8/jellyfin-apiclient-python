@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import division, absolute_import, print_function, unicode_literals
+from urllib.parse import urlencode
 
 
 def jellyfin_url(client, handler):
@@ -30,9 +31,10 @@ def music_info():
 
 
 class API(object):
+    """
+    All the api calls to the server.
+    """
 
-    ''' All the api calls to the server.
-    '''
     def __init__(self, client, *args, **kwargs):
         self.client = client
 
@@ -102,9 +104,11 @@ class API(object):
 
     def artwork(self, item_id, art, max_width, ext="jpg", index=None):
         if index is None:
-            return jellyfin_url(self.client, "Items/%s/Images/%s?MaxWidth=%s&format=%s" % (item_id, art, max_width, ext))
+            return jellyfin_url(self.client,
+                                "Items/%s/Images/%s?MaxWidth=%s&format=%s" % (item_id, art, max_width, ext))
 
-        return jellyfin_url(self.client, "Items/%s/Images/%s/%s?MaxWidth=%s&format=%s" % (item_id, art, index, max_width, ext))
+        return jellyfin_url(self.client,
+                            "Items/%s/Images/%s/%s?MaxWidth=%s&format=%s" % (item_id, art, index, max_width, ext))
 
     #################################################################################################
 
@@ -367,7 +371,8 @@ class API(object):
             'DeviceId': device_id
         })
 
-    def get_audio_stream(self, dest_file, item_id, play_id, container, max_streaming_bitrate=140000000, audio_codec=None):
+    def get_audio_stream(self, dest_file, item_id, play_id, container, max_streaming_bitrate=140000000,
+                         audio_codec=None):
         self._get_stream("Audio/%s/universal" % item_id, dest_file, params={
             'UserId': "{UserId}",
             'DeviceId': "{DeviceId}",
@@ -375,3 +380,29 @@ class API(object):
             'Container': container,
             'AudioCodec': audio_codec
         })
+
+    def reset_user_password(self, user_id):
+        return self._post("Users/%s/Password" % user_id, json={
+            'Id': user_id,
+            'ResetPassword': 'true'
+        })
+
+    def update_user_password(self, user_id, new_password):
+        self.reset_user_password(user_id)
+        return self._post("Users/%s/Password" % user_id, json={
+            'Id': user_id,
+            'CurrentPw': '',
+            'NewPw': new_password
+        })
+
+    def update_user_policy(self, user_id, policy):
+        return self._post("Users/%s/Policy" % user_id, json=policy)
+
+    def run_custom_query(self, query):
+        return self._post("user_usage_stats/submit_custom_query", json=query)
+
+    def create_playlist(self, playlist_name):
+        return self._post("Playlists?%s" % (urlencode({'Name': playlist_name})))
+
+    def add_to_playlist(self, item_id, playlist_id):
+        return self._post("Playlists/%s/Items?%s" % (playlist_id, item_id))
